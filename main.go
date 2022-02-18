@@ -48,29 +48,25 @@ func main() {
 	app := fiber.New()
 	app.Get("/api/diseases", func(c *fiber.Ctx) error {
 		var diseases []Disease
-		var finalMessage *fiber.Map
 		result := db.Find(&diseases)
-		if result.RowsAffected > 0 && result.Error == nil {
-			finalMessage = &fiber.Map{
-				"success":  false,
-				"message":  "Successfully retrieved disease data",
-				"diseases": diseases,
-			}
-		}
 		if result.RowsAffected == 0 {
-			finalMessage = &fiber.Map{
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"success": false,
 				"message": "No disease data found",
-			}
+			})
 		}
 		if result.Error != nil {
-			finalMessage = &fiber.Map{
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"success": false,
 				"message": "Error: Failed to retrieve disease data",
 				"error":   result.Error.Error,
-			}
+			})
 		}
-		return c.JSON(finalMessage)
+		return c.JSON(fiber.Map{
+			"success":  false,
+			"message":  "Successfully retrieved disease data",
+			"diseases": diseases,
+		})
 	})
 
 	app.Post("/api/diseases", func(c *fiber.Ctx) error {
