@@ -3,14 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/Komefumi/disease-storage/router"
-
-	"github.com/gofiber/fiber/v2"
+	"github.com/Komefumi/disease-storage/server"
 )
 
 func main() {
-	app := fiber.New()
-	router.SetupRoutes(app)
+	app := server.Setup()
 
 	log.Fatal(app.Listen(":3000"))
 }

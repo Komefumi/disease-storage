@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/Komefumi/disease-storage/model"
@@ -11,7 +12,22 @@ import (
 
 var DB *gorm.DB
 
-func init() {
+func CloseDatabase() {
+	if DB == nil {
+		return
+	}
+
+	sqlDB, err := DB.DB()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sqlDB.Close()
+}
+
+func SetupDatabase() {
+	CloseDatabase()
 	err := os.Remove("test.db")
 	if err != nil {
 		fmt.Println(err)
@@ -25,4 +41,8 @@ func init() {
 	// dbOpened.Create(&Disease{Name: "ProtoType Disease", Description: "Non real disease, made as a model to perform operations with"})
 
 	DB = dbOpened
+}
+
+func init() {
+	SetupDatabase()
 }
