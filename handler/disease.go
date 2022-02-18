@@ -42,10 +42,10 @@ func GetDiseaseByID(c *fiber.Ctx) error {
 	if errId != nil {
 		return handleInvalidIDError(c)
 	}
-	result := db.First(&disease).Where("id = ?", id)
-	if result.Error != nil {
+	result := db.Take(&disease).Where("id = ?", id)
+	if result.RowsAffected == 0 {
 		fmt.Println(id)
-		return handleDBError(fmt.Sprintf("Failed to find disease of id %v", id), result.Error, c)
+		return handleDBError(fmt.Sprintf("Failed to find disease of id %v", id), result.Error, fiber.StatusNotFound, c)
 	}
 	return c.JSON(fiber.Map{
 		"success": true,
@@ -66,7 +66,7 @@ func CreateDiseaseRecord(c *fiber.Ctx) error {
 	}
 	result := db.Create(disease)
 	if result.Error != nil {
-		return handleDBError("Failed to enter record", result.Error, c)
+		return handleDBError("Failed to enter record", result.Error, fiber.StatusInternalServerError, c)
 	}
 
 	return c.JSON(fiber.Map{
@@ -101,10 +101,10 @@ func UpdateDiseaseByID(c *fiber.Ctx) error {
 	result := db.Model(&disease).Where("id = ?", id).Updates(diseaseUpdates)
 	if result.RowsAffected == 0 {
 		errString := fmt.Sprintf("Failed to update disease of id %v - it seems to not exist", id)
-		return handleDBError(errString, errors.New(errString), c)
+		return handleDBError(errString, errors.New(errString), fiber.StatusNotFound, c)
 	}
 	if result.Error != nil {
-		return handleDBError(fmt.Sprintf("Failed to update disease of id %v", id), result.Error, c)
+		return handleDBError(fmt.Sprintf("Failed to update disease of id %v", id), result.Error, fiber.StatusInternalServerError, c)
 	}
 	disease.ID = uint(id)
 	return c.JSON(fiber.Map{
@@ -120,14 +120,14 @@ func DeleteDiseaseByID(c *fiber.Ctx) error {
 	if errId != nil {
 		return handleInvalidIDError(c)
 	}
-	result := db.First(&disease).Where("id = ?", id)
-	if result.Error != nil {
+	result := db.Model(&disease).Where("id = ?", id)
+	if result.RowsAffected == 0 {
 		fmt.Println(id)
-		return handleDBError(fmt.Sprintf("Failed to find disease of id %v", id), result.Error, c)
+		return handleDBError(fmt.Sprintf("Failed to find disease of id %v", id), result.Error, fiber.StatusNotFound, c)
 	}
 	result = db.Delete(&model.Disease{}, id)
 	if result.Error != nil {
-		return handleDBError(fmt.Sprintf("Failed to delete disease of id %v", id), result.Error, c)
+		return handleDBError(fmt.Sprintf("Failed to delete disease of id %v", id), result.Error, fiber.StatusInternalServerError, c)
 	}
 	return c.JSON(fiber.Map{
 		"success": true,

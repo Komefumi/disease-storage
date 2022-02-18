@@ -23,7 +23,7 @@ func handleInvalidBodyError(errors []*validation.ErrorResponse, c *fiber.Ctx) er
 	return c.Status(fiber.StatusBadRequest).JSON(errors)
 }
 
-func handleDBError(responseMessage string, err error, c *fiber.Ctx) error {
+func handleDBError(responseMessage string, err error, errorStatus int, c *fiber.Ctx) error {
 	log.Println(err.Error())
 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 		"message": responseMessage,
