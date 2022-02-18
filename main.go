@@ -26,19 +26,25 @@ type ErrorResponse struct {
 
 var validate = validator.New()
 
-func main() {
+var db *gorm.DB
+
+func init() {
 	err := os.Remove("test.db")
 	if err != nil {
 		fmt.Println(err)
 	}
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	dbOpened, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&Disease{})
+	dbOpened.AutoMigrate(&Disease{})
 
-	db.Create(&Disease{Name: "ProtoType Disease", Description: "Non real disease, made as a model to perform operations with"})
+	dbOpened.Create(&Disease{Name: "ProtoType Disease", Description: "Non real disease, made as a model to perform operations with"})
 
+	db = dbOpened
+}
+
+func main() {
 	app := fiber.New()
 	app.Get("/api/diseases", func(c *fiber.Ctx) error {
 		var diseases []Disease
@@ -70,22 +76,16 @@ func main() {
 	app.Post("/api/diseases", func(c *fiber.Ctx) error {
 		disease := new(Disease)
 		if err := c.BodyParser(disease); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": err.Error(),
-			})
+			return handleBodyParseError(err, c)
+			fmt.Println(disease)
 		}
-		errors := ValidateStruct(*disease)
-
+		errors := ValidateStruct(disease)
 		if errors != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(errors)
+			return handleInvalidBodyError(errors, c)
 		}
-
 		result := db.Create(disease)
 		if result.Error != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "Failed to enter record",
-			})
-			log.Println(result.Error.Error())
+			return handleRecordInsertionError(result.Error, c)
 		}
 
 		return c.JSON(fiber.Map{
@@ -96,6 +96,23 @@ func main() {
 	})
 
 	log.Fatal(app.Listen(":3000"))
+}
+
+func handleBodyParseError(err error, c *fiber.Ctx) error {
+	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		"message": err.Error(),
+	})
+}
+
+func handleInvalidBodyError(errors []*ErrorResponse, c *fiber.Ctx) error {
+	return c.Status(fiber.StatusBadRequest).JSON(errors)
+}
+
+func handleRecordInsertionError(err error, c *fiber.Ctx) error {
+	log.Println(err.Error())
+	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		"message": "Failed to enter record",
+	})
 }
 
 func ValidateStruct(payload interface{}) []*ErrorResponse {
