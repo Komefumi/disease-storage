@@ -6,6 +6,7 @@ import (
 
 	"os"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -13,9 +14,17 @@ import (
 
 type Disease struct {
 	gorm.Model
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string `validate:"required,min=1" json:"name"`
+	Description string `validate:"required,min=10" json:"description"`
 }
+
+type ErrorResponse struct {
+	FailedField string
+	Tag         string
+	Value       string
+}
+
+var validate = validator.New()
 
 func main() {
 	err := os.Remove("test.db")
@@ -58,5 +67,48 @@ func main() {
 		return c.JSON(finalMessage)
 	})
 
+	app.Post("/api/diseases", func(c *fiber.Ctx) error {
+		disease := new(Disease)
+		if err := c.BodyParser(disease); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		}
+		errors := ValidateStruct(*disease)
+
+		if errors != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(errors)
+		}
+
+		result := db.Create(disease)
+		if result.Error != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Failed to enter record",
+			})
+			log.Println(result.Error.Error())
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Successfully entered record",
+			"disease": disease,
+		})
+	})
+
 	log.Fatal(app.Listen(":3000"))
+}
+
+func ValidateStruct(payload interface{}) []*ErrorResponse {
+	var errors []*ErrorResponse
+	err := validate.Struct(payload)
+	if err != nil {
+		for _, err := range err.(validator.ValidationErrors) {
+			var element ErrorResponse
+			element.FailedField = err.StructNamespace()
+			element.Tag = err.Tag()
+			element.Value = err.Param()
+			errors = append(errors, &element)
+		}
+	}
+	return errors
 }
