@@ -46,3 +46,8 @@ func SetupDatabase() {
 func init() {
 	SetupDatabase()
 }
+
+func InsertPrototypes() error {
+	result := DB.Create(&model.PrototypeDisease)
+	return result.Error
+}
