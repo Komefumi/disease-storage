@@ -3,19 +3,14 @@ package tests
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"net/http"
 	"testing"
 
 	"github.com/Komefumi/disease-storage/database"
 	"github.com/Komefumi/disease-storage/model"
-	"github.com/Komefumi/disease-storage/server"
 	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDiseasesResource(t *testing.T) {
-	t.Log("uh")
 	tests := []APITest{
 		{
 			description:     "Get all the disease records",
@@ -27,29 +22,7 @@ func TestDiseasesResource(t *testing.T) {
 			postRunner:      GetAllDiseasesPostRunner,
 		},
 	}
-	app := server.Setup()
-
-	for _, test := range tests {
-		preErr := test.preRunner(app, t)
-		assert.Nil(t, preErr, test.description)
-		req, _ := http.NewRequest(test.method, test.route, nil)
-		res, errInResponse := app.Test(req, -1)
-
-		assert.Equal(t, test.isErrorExpected, errInResponse != nil, test.description)
-
-		if test.isErrorExpected {
-			continue
-		}
-
-		defer res.Body.Close()
-		body, bodyErr := ioutil.ReadAll(res.Body)
-
-		assert.Nil(t, bodyErr, test.description)
-
-		t.Log(string(body))
-		postErr := test.postRunner(string(body), t)
-		assert.Nil(t, postErr, test.description)
-	}
+	testAPIResource(tests, t)
 }
 
 func GetAllDiseasesPreRunner(app *fiber.App, t *testing.T) error {
@@ -69,12 +42,6 @@ func GetAllDiseasesPostRunner(bodyString string, t *testing.T) error {
 		diseaseIDs = append(diseaseIDs, currentID)
 	}
 	t.Log(diseaseIDs)
-	/*
-		if !diseasesCastIsOk {
-			t.Log(body["diseases"])
-			return errors.New("diseases must be a collection of disease records")
-		}
-	*/
 	if len(diseaseIDs) == 0 {
 		return errors.New("Must return non-empty collection of diseases")
 	}
