@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -28,13 +30,29 @@ func emptyPostRunner(bodyString string, t *testing.T) error {
 	return nil
 }
 
-func testAPIResource(tests []APITest, t *testing.T) {
+func testAPISuite(passedBaseURL interface{}, tests []APITest, t *testing.T) {
 	app := server.Setup()
+	var isBaseURLNil bool
+	var baseURL string
+
+	switch passedBaseURL.(type) {
+	case string:
+		isBaseURLNil = false
+	case nil:
+		isBaseURLNil = true
+	default:
+		panic(errors.New("passedBaseURL has to be a string if provided"))
+	}
+
+	if !isBaseURLNil {
+		baseURL = passedBaseURL.(string)
+	}
 
 	for _, test := range tests {
 		preErr := test.preRunner(app, t)
 		assert.Nil(t, preErr, test.description)
-		req, _ := http.NewRequest(test.method, test.route, nil)
+		route := fmt.Sprintf("%s%s", baseURL, test.route)
+		req, _ := http.NewRequest(test.method, route, nil)
 		res, errInResponse := app.Test(req, -1)
 
 		assert.Equal(t, test.isErrorExpected, errInResponse != nil, test.description)

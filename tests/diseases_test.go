@@ -14,7 +14,7 @@ func TestDiseasesResource(t *testing.T) {
 	tests := []APITest{
 		{
 			description:     "Get all the disease records",
-			route:           "/api/diseases",
+			route:           "",
 			method:          fiber.MethodGet,
 			isErrorExpected: false,
 			expectedCode:    200,
@@ -22,7 +22,7 @@ func TestDiseasesResource(t *testing.T) {
 			postRunner:      GetAllDiseasesPostRunner,
 		},
 	}
-	testAPIResource(tests, t)
+	testAPISuite("/api/diseases/", tests, t)
 }
 
 func GetAllDiseasesPreRunner(app *fiber.App, t *testing.T) error {
